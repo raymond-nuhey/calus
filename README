@@ -1,0 +1,9 @@
+Run ./pjscicalc2.py to execute the program. ./pjscicalc.py is an older (working) version.
+
+The program can be installed. Currently you just make sure all the files are in the same place and that that place is on your PATH. For example, on Linux, you might put all the files in /usr/local/bin, which usually makes them executable.
+
+I have not yet made an installer/uninstaller. If you want to help, contact me at J.D.Lamb@johndlamb.net.
+
+J’ai pensé à faire une version française. Mais, je ne suis pas sûr qu cela sera très importante. M’ecritez si vous aimez l’idée d’une version française et me disez ou seront le changements obligatoires.
+
+Version 1.2 resolves issues arising from opening files within the browser. Now Python passes all the HTML/JavaScript code to the browser.

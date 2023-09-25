@@ -1,0 +1,2650 @@
+<!DOCTYPE html>
+<!--
+# pjscicalc: a scientific calculator in python/html/javascript
+# Copyright (C) 2021 John D Lamb
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+-->
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="generator" content="Bluefish 2.2.12" >
+<meta name="author" content="John" >
+<meta name="date" content="2021-10-29T15:05:37+0100" >
+<meta name="copyright" content="">
+<meta name="keywords" content="">
+<meta name="description" content="">
+<meta name="ROBOTS" content="NOINDEX, NOFOLLOW">
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<meta http-equiv="content-type" content="application/xhtml+xml; charset=UTF-8">
+<meta http-equiv="content-style-type" content="text/css">
+<meta http-equiv="expires" content="0">
+<script>
+MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']]
+  },
+  svg: {
+    fontCache: 'global'
+  }
+};
+</script>
+<script type="text/javascript" id="MathJax-script" async
+  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>  
+<!--<script type="text/javascript" src="OObject.js"></script>-->
+<script type="text/javascript">
+class OObject {
+  // Constructor
+  constructor(){
+  }
+  asString(){
+    throw new Error('OObject is abstract.');  
+  }
+}
+class OError extends OObject {
+  /**
+   * Constructor.
+   * @param s A string describing the error
+   */
+  constructor(s){ // Always a string
+    super();
+	  this.s = s;
+  }
+  /**
+   * Describe the error.
+   * @return a description of the error
+   */
+  asString(){
+	  return this.s;
+  }
+}
+
+class Double extends OObject {
+  constructor(value){
+    super();
+    this.value = value;  
+  }
+}
+</script>
+<!--<script type="text/javascript" src="PObject.js"></script>-->
+<script type="text/javascript">
+class PObject {
+  // Constructor
+  constructor(){
+    this.ftooltip = 'PObject';
+    this.fshortcut = '@';
+  }
+  // Get the name
+  name_array(){
+    throw new Error('PObject is abstract.');
+  }
+  // Get the full name of the object
+  fullName(){
+    var full_name = this.name_array();
+    var result = '';    
+    full_name.forEach(
+      function (item,index) {
+        result = result + item;
+      }
+    );
+    return result;
+  }
+  // Get the short name of the object
+  shortName(){
+    var full_name = this.name_array();
+    var result = '';    
+    full_name.forEach(
+      function (item,index) {
+        if (item != '') {
+          result = result + item;
+        }
+      }
+    );
+    return result;
+  }
+  // Get tooltip value
+  tooltip = function () {
+    return ftooltip;
+  }
+  // Get shortcut value
+  shortcut = function () {
+    return fshortcut;
+  }
+}
+// Numerals 0–9 and .
+class Numeral extends PObject {
+  // Construct from a character
+  constructor(c){
+    super();
+    // The numeral character
+    this.c = '' + c;
+    if(1 == c.length){
+      this.fshortcut = c;
+    } else {
+      this.fshortcut = '.';
+    }
+  }
+  // Get the name
+  name_array(){
+    var result = [];
+    if(1 == this.c.length){ // decimal point
+      result.push(this.c);
+    } else {
+      result.push('.');
+    }
+    return result;
+  }
+}
+class Container extends PObject {
+  constructor(){
+    super();
+    // The pi character
+    this.c = new Double(0);
+  }
+  value(){
+    return this.c;
+  }
+}
+class PiObject extends Container {  
+  // Construct
+  constructor(){
+    super();
+    // The pi character
+    this.c = new Double(Math.PI);
+    this.fshortcut = this.c;
+    this.fname = '<span class="mathematics">&pi;</span>';
+  }
+  // Get the name
+  name_array(){
+    var result = [];
+    result.push(this.fname);
+    return result;
+  }
+}
+
+class Ans extends Container {  
+  // Construct
+  constructor(c){
+    super();
+    // The last answer
+    this.c = c;
+    this.fshortcut = this.c;
+    this.fname = 'ANS';
+  }
+  // Get the name
+  name_array(){
+    var result = [];
+    result.push(this.fname);
+    return result;
+  }
+}
+
+class Rcl extends Container {  
+  // Construct
+  constructor(c){
+    super();
+    // The last answer
+    this.c = c;
+    this.fshortcut = this.c;
+    this.fname = 'RCL';
+  }
+  // Get the name
+  name_array(){
+    var result = [];
+    result.push(this.fname);
+    return result;
+  }
+}
+
+/**
+ * Objects for addition and subtraction and also change of sign. The change of sign
+ * is eventually done in most cases by converting to Uplus or Uminus, though signs
+ * are handled directly for exponents, which must be integer.
+ * @see Uplus
+ * @see Uminus
+ *
+ * @author J.&nbsp;D.&nbsp;Lamb
+ */
+class AFunction extends PObject {
+  constructor(){
+    super();
+    this.fname = [];
+  }
+  /**
+   * This function carries out an operation like plus or minus.
+   * @param x The first value (left of symbol)
+   * @param y The second value (right of symbol)
+   * @return The result of the operation
+   */
+  dfn( x, y ){
+   throw new Error('AFunction is abstract.');   
+  }
+  /**
+   * This function carries out a change of sign (or does nothing) (unary plus
+   * or unary minus).
+   * @param x The value (right of symbol)
+   * @return The result of the operation
+   */
+   ufn(){
+     throw new Error('AFunction is abstract.');
+   }
+   // Get the name
+    name_array(){
+    var result = [];
+    result.push(this.fname);
+    return result;
+  }
+}
+
+/**
+ * Addition operation.
+ *
+ * @author J.&nbsp;D.&nbsp;Lamb
+ */
+class Add extends AFunction {
+  /**
+   * Constructor. Sets a tooltip and shortcut.
+   */
+  constructor(){
+    super();
+    this.fname.push('+');
+	  this.ftooltip = "addition or plus sign";
+	  this.fshortcut = '+';
+  }
+  /**
+   * This function carries out addition.
+   * @param x The first value (left of symbol)
+   * @param y The second value (right of symbol)
+   * @return The result of the operation
+   */
+  dfn( x, y ){
+	  x.add(y);
+	  return x;
+  }
+  /**
+   * This function does nothing x.
+   * @param x The value (right of symbol)
+   * @return The result of the operation
+   */
+  ufn(x){
+	  return this;
+  }
+}
+
+/**
+ * Subtraction operation.
+ *
+ * @author J.&nbsp;D.&nbsp;Lamb
+ */
+class Subtract extends AFunction {
+  /**
+   * Constructor. Sets a tooltip and shortcut.
+   */
+  constructor(){
+    super();
+    this.fname.push('&minus;');
+	  this.ftooltip = "subtraction or minus sign";
+	  this.fshortcut = '+';
+  }
+  /**
+   * This function carries out subtraction.
+   * @param x The first value (left of symbol)
+   * @param y The second value (right of symbol)
+   * @return The result of the operation
+   */
+  dfn( x, y ){
+	  x.subtract(y);
+	  return x;
+  }
+  /**
+   * This function does nothing (+x == x).
+   * @param x The value (right of symbol)
+   * @return The result of the operation
+   */
+  ufn(x){
+	  x.negate();
+	  return x;
+  }
+}
+
+/**
+ * A function such as Power can act on two values, one left and one right of the
+ * symbol. This class specifies what is needed for a DFunction and allows Parser
+ * to handle a DFunction without knowing the exact type.
+ * @see Parser
+ *
+ * @author J.&nbsp;D.&nbsp;Lamb
+ */
+class DFunction extends PObject {
+  constructor(){
+    super();
+    this.fname = [];
+  }
+  /**
+   * This function carries out an operation like Power.
+   * @param x The first value (left of symbol)
+   * @param y The second value (right of symbol)
+   * @return The result of the operation
+   */
+  dfn( x, y ){
+    throw new Error('DFunction is abstract.');
+  }  
+  // Get the name
+  name_array(){
+    var result = [];
+    result.push(this.fname);
+    return result;
+  } 
+}
+
+/**
+ * DFunction that allows scientific notation entry. Probably now obsolete. It
+ * did allow expressions like 1e1.3, but was problematic because of rounding errors.
+ * @see Parser
+ *
+ * @author J.&nbsp;D.&nbsp;Lamb
+ */
+class E extends DFunction {
+  /**
+   * Constructor. Sets a tooltip and shortcut.
+   */
+  constructor() {
+    super();
+    this.ftooltip = "use to enter scientific notation<br>" +
+      "in the form <em>x</em>e<em>y</em> = " +
+      "<em>x</em> &#215; 10<sup><em>y</em></sup>";
+    this.fshortcut = 'e';
+    this.fname ='e';
+  }
+  /**
+   * Calculates a OObject xey.
+   * @param x The first value (left of symbol)
+   * @param y The second value (right of symbol)
+   * @return The result of the operation
+   */
+   dfn(x,y){
+     var dTen = new Double(10);
+     return x.multiply(dTen.rpow(y.value));
+   }
+}
+
+/**
+ * Power function. 
+ * @see Parser
+ *
+ * @author J.&nbsp;D.&nbsp;Lamb
+ */
+class Power extends DFunction {
+  /**
+   * Constructor. Sets a tooltip and shortcut.
+   */
+  constructor() {
+    super();
+    this.ftooltip = "^";
+    this.fshortcut = '^';
+    this.fname = ['^'];
+  }
+  /**
+   * Calculates a OObject xey.
+   * @param x The first value (left of symbol)
+   * @param y The second value (right of symbol)
+   * @return The result of the operation
+   */
+   dfn(x,y){
+     x.power(y);
+     return x;
+   }
+}
+
+/**
+ * DFunction that calculates combinations.
+ *
+ * @author J.&nbsp;D.&nbsp;Lamb
+ */
+class Combination extends DFunction {
+  /**
+   * Constructor. Sets a tooltip and shortcut.
+   */
+  constructor(){
+    super();
+	  this.ftooltip = "the number of ways of choosing " +
+	    "<i>r</i> from <i>n</i><br>" +
+	    "distinct objects, ignoring order of choice";
+	  this.fshortcut = 'C';
+	  this.fname = ['&thinsp;C&thinsp;'];
+  }
+  /**
+   * Calculates the number of unordered ways to choose y objects from x.
+   * Produces an error if this doesn&rsquo;t make sense.
+   * @param x The first value (left of symbol)
+   * @param y The second value (right of symbol)
+   * @return The result of the operation
+   */
+  dfn( x, y ){
+    x.combination(y);
+    return x;
+  }
+}
+
+/**
+ * DFunction that calculates permutations.
+ *
+ * @author J.&nbsp;D.&nbsp;Lamb
+ */
+class Permutation extends DFunction {
+  /**
+   * Constructor. Sets a tooltip and shortcut.
+   */
+  constructor(){
+    super();
+	  this.ftooltip = "the number of ordered ways of choosing " +
+	    "<i>r</i> from <i>n</i><br>" +
+	    "distinct objects, ignoring order of choice";
+	  this.fshortcut = 'P';
+	  this.fname = ['&thinsp;P&thinsp;'];
+  }
+  /**
+   * Calculates the number of ordered ways to choose y objects from x.
+   * Produces an error if this doesn&rsquo;t make sense.
+   * @param x The first value (left of symbol)
+   * @param y The second value (right of symbol)
+   * @return The result of the operation
+   */
+  dfn( x, y ){
+    x.permutation(y);
+    return x;
+  }
+}
+
+/**
+ * Information for left parenthesis. Parser checks parentheses first and evaluates
+ * inside each pair before combining expressions.
+ * @see Parser
+ *
+ * @author J. D. Lamb
+ */
+class LParen extends PObject {
+  constructor(){
+    super();
+	  this.ftooltip = 'left parenthesis (bracket)';
+	  this.fshortcut = '(';
+	  this.fname = ['('];
+  }
+
+  name_array(){
+	  return this.fname;
+  }
+}
+/**
+ * Information for right parenthesis. Parser checks parentheses first and evaluates
+ * inside each pair before combining expressions.
+ * @see Parser
+ *
+ * @author J. D. Lamb
+ */
+class RParen extends PObject {
+  constructor(){
+    super();
+	  this.ftooltip = 'right parenthesis (bracket)';
+	  this.fshortcut = ')';
+	  this.fname = [')'];
+  }
+
+  name_array(){
+	  return this.fname;
+  }
+}
+
+/**
+ * A function such as SquareRoot acts the value on its right.
+ * This class specifies what is needed for a RFunction and allows Parser
+ * to handle a RFunction without knowing the exact type.
+ * @see Parser
+ *
+ * @author J. D. Lamb
+ */
+class RFunction extends PObject {
+  constructor(){
+    super();
+    this.fname = [];
+  }
+  /**
+   * This function carries out an operation like SquareRoot.
+   * @param x The first value (rght of symbol)
+   * @return The result of the operation
+   */
+  fn( x ){      
+   throw new Error('RFunction is abstract.');
+  }
+  name_array(){
+	  return this.fname;
+  }
+}
+
+/**
+ * Unary plus operation. This is not currently used directly but Parser
+ * uses it internally to replace Add objects where appropriate.
+ *
+ * @author J. D. Lamb
+ */
+class Uplus extends RFunction {
+  /**
+   * Constructor. Sets a tooltip and shortcut.
+   */
+  constructor(){
+    super();
+    this.fname.push('+'); 
+  }
+  /**
+   * This function does nothing (+x == x).
+   * @param x The value (right of symbol)
+   * @return The result of the operation
+   */
+  fn( x ){
+	 return x;
+  }
+}
+
+/**
+ * Unary minus operation. This is not currently used directly but Parser
+ * uses it internally to replace Subtract objects where appropriate.
+ *
+ * @author J. D. Lamb
+ */
+class Uminus extends RFunction {
+  /**
+   * Constructor. Sets a tooltip and shortcut.
+   */
+  constructor(){
+    super();
+    this.fname.push('i');
+  }
+  /**
+   * This function negates x.
+   * @param x The value (right of symbol)
+   * @return The result of the operation
+   */
+  fn( x ){
+	  x.negate();
+    return x;
+  }
+}
+
+/**
+ * Square root operation.
+ *
+ * @author J.&nbsp;D.&nbsp;Lamb
+ */
+class SquareRoot extends RFunction {
+  /**
+   * Constructor. Sets a tooltip and shortcut.
+   */
+  constructor() {
+    super();
+	  this.ftooltip = "square root of <i>x</i>";
+	  this.fshortcut = 'r';
+	  this.fname.push('<span class="mathematics">&Sqrt;</span>');
+  }
+  /**
+   * Calculates square root of x.
+   * @param x The value (right of symbol)
+   * @return The result of the operation
+   */
+  fn( x ){
+    x.sqrt();
+	  return x;
+  }
+}
+/**
+ * Cube root operation.
+ *
+ * @author J.&nbsp;D.&nbsp;Lamb
+ */
+class CubeRoot extends RFunction {
+  /**
+   * Constructor. Sets a tooltip and shortcut.
+   */
+  constructor() {
+    super();
+	  this.ftooltip = "cube root of <i>x</i>";
+	  this.fshortcut = 'r';
+	  this.fname.push('<span class="mathematics">&#8731;</span>');
+  }
+  /**
+   * Calculates square root of x.
+   * @param x The value (right of symbol)
+   * @return The result of the operation
+   */
+  fn( x ){
+    x.cbrt();
+	  return x;
+  }
+}
+
+const RADIAN_SCALE = new Double(1);
+const DEGREE_SCALE = new Double(Math.PI/180);
+/**
+ * Trig operation.
+ *
+ * @author J.&nbsp;D.&nbsp;Lamb
+ */
+class TrigFunction extends RFunction {
+  /**
+   * Constructor. Sets a tooltip and shortcut.
+   */
+  constructor() {
+    super();
+    this.scale = RADIAN_SCALE; // radians: use DEGREE_SCALE for degrees
+  }
+}
+
+/**
+ * Sin operation.
+ *
+ * @author J.&nbsp;D.&nbsp;Lamb
+ */
+class Sin extends TrigFunction {
+  /**
+   * Constructor. Sets a tooltip and shortcut.
+   */
+  constructor() {
+    super();
+	  this.ftooltip = "sin of <i>x</i>";
+	  this.fshortcut = 'r';
+	  this.fname.push('sin&thinsp;');
+  }
+  /**
+   * Calculates sin x.
+   * @param x The value (right of symbol)
+   * @return The result of the operation
+   */
+  fn( x ){
+    x.multiply(this.scale);
+    x.sin();
+	  return x;
+  }
+}
+
+/**
+ * Cos operation.
+ *
+ * @author J.&nbsp;D.&nbsp;Lamb
+ */
+class Cos extends TrigFunction {
+  /**
+   * Constructor. Sets a tooltip and shortcut.
+   */
+  constructor() {
+    super();
+	  this.ftooltip = "cos of <i>x</i>";
+	  this.fshortcut = 'r';
+	  this.fname.push('cos&thinsp;');
+  }
+  /**
+   * Calculates cos x.
+   * @param x The value (right of symbol)
+   * @return The result of the operation
+   */
+  fn( x ){
+    x.multiply(this.scale);
+    x.cos();
+	  return x;
+  }
+}
+
+/**
+ * Tan operation.
+ *
+ * @author J.&nbsp;D.&nbsp;Lamb
+ */
+class Tan extends TrigFunction {
+  /**
+   * Constructor. Sets a tooltip and shortcut.
+   */
+  constructor() {
+    super();
+	  this.ftooltip = "tan of <i>x</i>";
+	  this.fshortcut = 'r';
+	  this.fname.push('tan&thinsp;');
+  }
+  /**
+   * Calculates cos x.
+   * @param x The value (right of symbol)
+   * @return The result of the operation
+   */
+  fn( x ){
+    x.multiply(this.scale);
+    x.tan();
+	  return x;
+  }
+}
+
+/**
+ * Arcsin operation.
+ *
+ * @author J.&nbsp;D.&nbsp;Lamb
+ */
+class Arcsin extends TrigFunction {
+  /**
+   * Constructor. Sets a tooltip and shortcut.
+   */
+  constructor() {
+    super();
+	  this.ftooltip = "arcsin of <i>x</i>";
+	  this.fshortcut = 'r';
+	  this.fname.push('sin<sup>&minus;1</sup>&thinsp;');
+  }
+  /**
+   * Calculates arcsin x.
+   * @param x The value (right of symbol)
+   * @return The result of the operation
+   */
+  fn( x ){
+    x.arcsin();
+    x.divide(this.scale);
+	  return x;
+  }
+}
+/**
+ * Arccos operation.
+ *
+ * @author J.&nbsp;D.&nbsp;Lamb
+ */
+class Arccos extends TrigFunction {
+  /**
+   * Constructor. Sets a tooltip and shortcut.
+   */
+  constructor() {
+    super();
+	  this.ftooltip = "arccos of <i>x</i>";
+	  this.fshortcut = 'r';
+	  this.fname.push('cos<sup>&minus;1</sup>&thinsp;');
+  }
+  /**
+   * Calculates arccos x.
+   * @param x The value (right of symbol)
+   * @return The result of the operation
+   */
+  fn( x ){
+    x.arccos();
+    x.divide(this.scale);
+	  return x;
+  }
+}
+/**
+ * Arctan operation.
+ *
+ * @author J.&nbsp;D.&nbsp;Lamb
+ */
+class Arctan extends TrigFunction {
+  /**
+   * Constructor. Sets a tooltip and shortcut.
+   */
+  constructor() {
+    super();
+	  this.ftooltip = "arctan of <i>x</i>";
+	  this.fshortcut = 'r';
+	  this.fname.push('tan<sup>&minus;1</sup>&thinsp;');
+  }
+  /**
+   * Calculates arctan x.
+   * @param x The value (right of symbol)
+   * @return The result of the operation
+   */
+  fn( x ){
+    x.arctan();
+    x.divide(this.scale);
+	  return x;
+  }
+}
+
+/**
+ * Log operation.
+ *
+ * @author J.&nbsp;D.&nbsp;Lamb
+ */
+class Log extends RFunction {
+  /**
+   * Constructor. Sets a tooltip and shortcut.
+   */
+  constructor() {
+    super();
+	  this.ftooltip = "logarithm of <i>x</i>";
+	  this.fshortcut = 'L';
+	  this.fname.push('log&thinsp;');
+  }
+  /**
+   * Calculates log x.
+   * @param x The value (right of symbol)
+   * @return The result of the operation
+   */
+  fn( x ){
+    x.log();
+	  return x;
+  }
+}
+
+/**
+ * natural log operation.
+ *
+ * @author J.&nbsp;D.&nbsp;Lamb
+ */
+class Ln extends RFunction {
+  /**
+   * Constructor. Sets a tooltip and shortcut.
+   */
+  constructor() {
+    super();
+	  this.ftooltip = "natural logarithm of <i>x</i>";
+	  this.fshortcut = 'l';
+	  this.fname.push('ln&thinsp;');
+  }
+  /**
+   * Calculates ln x.
+   * @param x The value (right of symbol)
+   * @return The result of the operation
+   */
+  fn( x ){
+    x.ln();
+	  return x;
+  }
+}
+
+/**
+ * Root operation.
+ *
+ * @author J.&nbsp;D.&nbsp;Lamb
+ */
+class Root extends DFunction {
+  /**
+   * Constructor. Sets a tooltip and shortcut.
+   */
+  constructor() {
+    super();
+	  this.ftooltip = "rth root of <i>x</i>";
+	  this.fshortcut = 'l';
+	  this.fname.push('<sup class="input-sup"><em>r</em></sup><span class="mathematics">&Sqrt;</span>');
+  }
+  /**
+   * Calculates ln x.
+   * @param x The value (right of symbol)
+   * @return The result of the operation
+   */
+  dfn( x, y ){
+    x.value = 1/x.value;
+    y.power(x);
+    x = y;
+    return x;
+  }
+}
+
+/**
+ * ten to the power of x operation.
+ *
+ * @author J.&nbsp;D.&nbsp;Lamb
+ */
+class TenX extends RFunction {
+  /**
+   * Constructor. Sets a tooltip and shortcut.
+   */
+  constructor() {
+    super();
+	  this.ftooltip = "ten to the power of <i>x</i>";
+	  this.fshortcut = 'l';
+	  this.fname.push('10<sup><em>x</em></sup>&thinsp;');
+  }
+  /**
+   * Calculates 10^x.
+   * @param x The value (right of symbol)
+   * @return The result of the operation
+   */
+  fn( x ){
+    x.tenX();
+	  return x;
+  }
+}
+/**
+ * exp operation.
+ *
+ * @author J.&nbsp;D.&nbsp;Lamb
+ */
+class Exp extends RFunction {
+  /**
+   * Constructor. Sets a tooltip and shortcut.
+   */
+  constructor() {
+    super();
+	  this.ftooltip = "exp of <i>x</i>";
+	  this.fshortcut = 'l';
+	  this.fname.push('exp&thinsp;');
+  }
+  /**
+   * Calculates exp x.
+   * @param x The value (right of symbol)
+   * @return The result of the operation
+   */
+  fn( x ){
+    x.exp();
+	  return x;
+  }
+}
+
+/**
+ * A function such as Square acts the value on its right.
+ * This class specifies what is needed for a LFunction and allows Parser
+ * to handle a LFunction without knowing the exact type.
+ * @see Parser
+ *
+ * @author J. D. Lamb
+ */
+class LFunction extends PObject {
+  constructor(){
+    super();
+    this.fname = [];
+  }
+  /**
+   * This function carries out an operation like Square.
+   * @param x The first value (rght of symbol)
+   * @return The result of the operation
+   */
+  fn( x ){      
+   throw new Error('LFunction is abstract.');
+  }
+  name_array(){
+	  return this.fname;
+  }
+}
+
+/**
+ * Square operation.
+ *
+ * @author J. D. Lamb
+ */
+class Square extends LFunction {
+  /**
+   * Constructor. Sets a tooltip and shortcut.
+   */
+  constructor(){
+    super()
+	  this.ftooltip = "square of <i>x</i>";
+	  this.fshortcut = 'q';
+	  this.fname.push('<sup class="input-sup">2</sup>');
+  }
+  /**
+   * Square function x * x.
+   * @param x The value (left of symbol)
+   * @return The result of the operation
+   */
+  fn( x ){
+    x.multiply(x);
+	  return x;
+  }
+}
+
+/**
+ * Cube operation.
+ *
+ * @author J. D. Lamb
+ */
+class Cube extends LFunction {
+  /**
+   * Constructor. Sets a tooltip and shortcut.
+   */
+  constructor(){
+    super()
+	  this.ftooltip = "cube of <i>x</i>";
+	  this.fshortcut = 'q';
+	  this.fname.push('<sup class="input-sup">3</sup>');
+  }
+  /**
+   * Cube function x * x.
+   * @param x The value (left of symbol)
+   * @return The result of the operation
+   */
+  fn( x ){
+    x.value = x.value*x.value*x.value;
+	  return x;
+  }
+}
+
+/**
+ * Factorial operation.
+ *
+ * @author J. D. Lamb
+ */
+class Factorial extends LFunction {
+  /**
+   * Constructor. Sets a tooltip and shortcut.
+   */
+  constructor(){
+    super()
+	  this.ftooltip = "factorial of <i>x</i>";
+	  this.fshortcut = '!';
+	  this.fname.push('!');
+  }
+  factorial (n) {
+    if (0 == n || 1 == n){
+      return 1;
+    }
+    return this.factorial(n-1) * n;
+  }
+  /**
+   * Factorial function x!.
+   * @param x The value (left of symbol)
+   * @return The result of the operation
+   */
+  fn( x ){
+    if (x.value < 0 || Math.round(x.value) - x.value != 0){
+      throw new Error('Factorial error.');
+    }
+    x.value = this.factorial(x.value);
+	  return x;
+  }
+}
+
+/**
+ * Inverse operation.
+ *
+ * @author J. D. Lamb
+ */
+class Inverse extends LFunction {
+  /**
+   * Constructor. Sets a tooltip and shortcut.
+   */
+  constructor(){
+    super()
+	  this.ftooltip = "inverse of <i>x</i>";
+	  this.fshortcut = 'i';
+	  this.fname.push('<sup class="input-sup">&minus;1</sup>');
+  }
+  /**
+   * Inverse function x * x.
+   * @param x The value (left of symbol)
+   * @return The result of the operation
+   */
+  fn( x ){
+    var o = new Double(1);
+    o.divide(x);
+	  return o;
+  }
+}
+
+/**
+ * This class handles multiplication and divison. We use MFunction, AFunction
+ * to group functions with the same precedence. Parser evaluates
+ * Mfunction objects then AFunction objects.
+ *
+ * @author J.&nbsp;D.&nbsp;Lamb
+ */
+class MFunction extends PObject {
+  constructor(){
+    super();
+    this.fname = [];
+  }
+  /**
+   * This function carries out an operation like multiplication or division.
+   * @param x The first value (left of symbol)
+   * @param y The second value (right of symbol)
+   * @return The result of the operation
+   */
+  fn( x, y ){
+    throw new Error('MFunction is abstract.');   
+  }
+   // Get the name
+  name_array(){
+    var result = [];
+    result.push(this.fname);
+    return result;
+  }
+}
+
+/**
+ * Multiplication operation.
+ *
+ * @author J. D. Lamb
+ */
+class Multiply extends MFunction {
+  /**
+   * Constructor. Sets a tooltip and shortcut.
+   */
+  constructor(){
+    super();
+	  this.ftooltip = "multiplication";
+	  this.fshortcut = '*';
+	  this.fname += '&times;';
+  }
+  /**
+   * Calculate x * y.
+   * @param x The first value (left of symbol)
+   * @param y The second value (right of symbol)
+   * @return The result of the operation
+   */
+  fn( x, y ){
+	  x.multiply(y);
+	  return x;
+  }
+}
+
+/**
+ * Multiplication operation.
+ *
+ * @author J. D. Lamb
+ */
+class Divide extends MFunction {
+  /**
+   * Constructor. Sets a tooltip and shortcut.
+   */
+  constructor(){
+    super();
+	  this.ftooltip = "division";
+	  this.fshortcut = '/';
+	  this.fname += '&divide;';
+  }
+  /**
+   * Calculate x / y.
+   * @param x The first value (left of symbol)
+   * @param y The second value (right of symbol)
+   * @return The result of the operation
+   */
+  fn( x, y ){
+	  x.divide(y);
+	  return x;
+  }
+}
+
+/**
+ * This is the function that converts objects to a string to be parsed
+ * by Python. The string is a unique identification of the PObjects. 
+ * @param list List of PObjects
+ * @return A string that Python can parse
+ */
+function convertToStringForPython( list ) {
+  result = ''; // initially empty
+	for( var i = 0; i < list.length; ++i ){
+	  var obj = list[i];
+	  if (obj instanceof Numeral) {
+	    result += '#'+obj.name_array()+';'
+	  } else if (obj instanceof PiObject) {
+	    result += 'pi;';
+	  } else if (obj instanceof Ans) {
+	    result += 'ANS;';
+	  } else if (obj instanceof Rcl) {
+	    result += 'RCL;';
+	  } else if (obj instanceof Add) {
+	    result += '+;';
+	  } else if (obj instanceof Subtract) {
+	    result += '-;';
+	  } else if (obj instanceof Multiply) {
+	    result += '*;';
+	  } else if (obj instanceof Divide) {
+	    result += '/;';
+	  } else if (obj instanceof LParen) {
+	    result += '(;';
+	  } else if (obj instanceof RParen) {
+	    result += ');';
+	  } else if (obj instanceof E) {
+	    result += 'E;';
+	  } else if (obj instanceof Power) {
+	    result += '^;';
+	  } else if (obj instanceof Combination) {
+	    result += 'C;';
+	  } else if (obj instanceof Permutation) {
+	    result += 'P;';
+	  } else if (obj instanceof Root) {
+	    result += 'root;';
+	  } else if (obj instanceof Uplus) {
+	    result += 'u+;';
+	  } else if (obj instanceof Uminus) {
+	    result += 'u-;';
+	  } else if (obj instanceof SquareRoot) {
+	    result += 'sqrt;';
+	  } else if (obj instanceof CubeRoot) {
+	    result += 'cbrt;';
+	  } else if (obj instanceof Log) {
+	    result += 'log;';
+	  } else if (obj instanceof Ln) {
+	    result += 'ln;';
+	  } else if (obj instanceof TenX) {
+	    result += 'tenX;';
+	  } else if (obj instanceof Exp) {
+	    result += 'exp;';
+	  } else if (obj instanceof Sin) {
+	    result += 'sin;';
+	  } else if (obj instanceof Cos) {
+	    result += 'cos;';
+	  } else if (obj instanceof Tan) {
+	    result += 'tan;';
+	  } else if (obj instanceof Arcsin) {
+	    result += 'asin;';
+	  } else if (obj instanceof Arccos) {
+	    result += 'acos;';
+	  } else if (obj instanceof Arctan) {
+	    result += 'atan;';
+	  } else if (obj instanceof Square) {
+	    result += '2;';
+	  } else if (obj instanceof Cube) {
+	    result += '3;';
+	  } else if (obj instanceof Factorial) {
+	    result += '!;';
+	  } else if (obj instanceof Inverse) {
+	    result += 'inv;';
+	  } else {
+	    console.log('Something went wrong trying to convert input to string!');
+	  }
+  }
+  return result;
+}
+
+class Parser {
+  constructor(inputLabel){
+    this.list = [];
+    this.lastANS = new Double(0);
+    this.inputLabel = inputLabel;
+    this.radians = false; //measures in degrees
+    this.memory = 0;
+  }
+  parseFloat(string){
+    string = string+'';
+    var decimalCount = 0;
+    var eCount = 0;
+    for (var i = 0; i < string.length; ++i) {
+      if('.' == string[i]){
+        decimalCount++;
+      }
+      if('e' == string[i]){
+        eCount++;
+      }
+      if (1 == eCount && '.' == string[i]) {
+        eCount++;
+      }
+      if (1+i == string.length && ('e' == string[i] || '-' == string[i])) {
+        eCount = 42; // force error
+      }
+    }
+    if (decimalCount > 1 || eCount > 1) {
+      throw new Error('Error parsing number');
+    }
+    return parseFloat(string);
+  }
+  /**
+   * Put a PObject object on the end of the expression.
+   * @param o The PObject to add
+   */
+  appendObject(o){
+	 this.list.push(o);
+  }
+  /**
+   * Convert exponents into a form that can be read directly. Exponents get
+   * converted early in the process of evaluating an expression.
+   * @param list A list of tokens to be evaluated.
+   */
+  convertExponentsToNumerals( list ){
+	  for( var i = 0; i < list.length; ++i ){
+	    var obj = list[i];
+	    if( obj instanceof E ){
+	      list.splice(i,1,eNumeral); // replace with 'e'.
+	      var negative = false;
+	      for (var j = i+1; list[j] instanceof Add || list[j] instanceof Subtract; ++j) {
+	        obj = list[j];
+	        if (obj instanceof Add) {
+	          // do nothing other than remove
+	          list.splice(i+1,1); --j;
+	        } else if (obj instanceof Subtract) {
+	          negative = !negative;
+	          list.splice(i+1,1); --j;
+	        }
+	      }
+	      // Run out of +s and –s
+	      if(negative)
+	        list.splice(i+1,0,minusNumeral);
+	    }
+	  }
+  }
+
+  /**
+   * Convert anything that is a Numeral into a Double
+   * Exponents are also converted implicitly.
+   * @see Numeral
+   * @param list A list of tokens to be evaluated.
+   */
+  convertNumerals( list ){
+	  this.convertExponentsToNumerals( list );
+	  for( var i = 0; i < list.length; ++i ){
+	    var obj = list[i];
+	    if( obj instanceof Numeral ){
+	      var number = obj.fshortcut; // actually a string of length 1
+		    list.splice(i,1);
+	      while (i < list.length && list[i] instanceof Numeral){
+    	    obj = list[i]; // declared above
+	        number += obj.fshortcut;    // adds a digit or decimal point to string
+	        list.splice(i,1);
+	      }
+	      // Now we have to add a Double where the sequence of digits was
+	      var myDouble = new Double(this.parseFloat(number));
+	      list.splice(i,0,myDouble);
+	    }
+	  }
+  }
+    
+  /**
+   * Convert anything that is a Container.
+   * Numerals and exponents are also done before containers are handled.
+   * @see Container
+   * @param list A list of tokens to be evaluated.
+   */
+  convertContainers( list ){
+	  /* first we convert Numerals */
+	  this.convertNumerals( list );
+	  for (var i = 0; i < list.length; ++i) {
+	    var obj = list[i];
+	    if( obj instanceof Container ){
+	      list.splice(i,1,obj.value());
+      }
+	  }
+  }
+  /**
+   * This is where unary plus/minus is handled. Implicitly calls
+   * convertIs.
+   * @param list A list of tokens to be evaluated.
+   */
+  convertARFunctions( list ){
+	  /* first we must convert Variables */
+	  this.convertContainers( list );
+	  for (var i = list.length-1; i > -1; --i) {
+	    var a = list[i];
+	    if (a instanceof AFunction) {
+	      if(0 == i || !(list[i-1] instanceof OObject || list[i-1] instanceof LFunction)){
+	        // unary ±
+	        if (a instanceof Add) {
+	          list.splice(i,1,new Uplus);
+	        } else if (a instanceof Subtract) {
+	          list.splice(i,1,new Uminus);
+	        } else {
+	          throw new Error('+/- Error');
+	        }
+ 	      } 
+	    }
+	  }
+  }
+  /**
+   * Deal with Square and like left functions.
+   * Calls convertARFunction (through convertExponents) first.
+   * @param list A list of tokens to be evaluated.
+   */
+  convertLFunctions( list ){
+	  /* first we must convert ARFunctions */
+	  this.convertARFunctions( list );
+	  for (var i = 1; i < list.length; ++i) {
+	    var o = list[i];
+	    if(o instanceof LFunction){
+	      var d = o.fn(list[i-1]);
+	      list.splice(i-1,2,d);--i;
+	    }
+	  }
+  }
+  /**
+   * Deal with functions like Power that have both left and right arguments.
+   * Calls convertLFunctions first.
+   * @param list A list of tokens to be evaluated.
+   */
+  convertDFunctions( list ){
+	  /* first we must convert LFunctions */
+	  this.convertLFunctions( list );
+	  for (var i = 1; i < list.length-1; ++i) {
+	    if(list[i] instanceof DFunction){
+	      // Need to evaluate any following RFunctions
+	      if (list[i+1] instanceof RFunction){
+	        var j = i+1;
+	        while (list[j+1] instanceof RFunction) {
+	          ++j;
+	        } // j is index of last RFunction
+	        while (j >= i+1){
+	          list[j] = list[j].fn(list[j+1]);
+	          list.splice(j+1,1);
+	          --j; // next RFunction
+	        }
+	      }
+	      list[i-1] = list[i].dfn(list[i-1],list[i+1]);
+	      list.splice(i,2);
+	    }
+	  } 
+	}
+    
+  /**
+   * Deal with functions like SquareRoot that have right argument only.
+   * Calls convertDFunctions first.
+   * @param list A list of tokens to be evaluated.
+   */
+  convertRFunctions( list ){
+	  /* first we must convert DFunctions */
+	  this.convertDFunctions( list );
+	  for (var i = list.length-2; i > -1; --i) {
+	    var o = list[i];
+	    if (o instanceof RFunction) {
+        list.splice(i,2,o.fn(list[i+1]));	      
+	    }
+	  }
+	}
+
+  /**
+   * Deal with multiplication and division.
+   * Calls convertRFunctions first.
+   * @param list A list of tokens to be evaluated.
+   */
+  convertMFunctions( list ){
+	  /* first we must convert RFunctions */
+	  this.convertRFunctions( list );
+	  for (var i = 1; i < list.length-1; ++i) { // skip first and last
+	    var o = list[i];
+	    if (o instanceof MFunction) {
+	      var d = o.fn(list[i-1],list[i+1]);
+	      list[i-1] = d;
+	      list.splice(i,2);
+	      --i;
+	    }
+	  }
+	}
+  /**
+   * Deal with addition and subtraction.
+   * Calls convertMFunctions first.
+   * @param list A list of tokens to be evaluated.
+   */
+  convertAFunctions( list ){
+	  /* first we must convert MFunctions */
+	  this.convertMFunctions( list );
+	  for (var i = 0; i < list.length; ++i) {
+	    if (list[i] instanceof AFunction) {
+	      list[i-1] = list[i].dfn(list[i-1],list[i+1]);
+	      list.splice(i,2); --i;
+	    }
+	  }
+	}
+  /**
+   * Takes final expression and multiplies all Complex numbers together.
+   * Calls AFunctions first (and cascades)
+   * @param list A list of tokens to be evaluated.
+   */
+  convertToProduct( list ){
+	  this.convertAFunctions( list );
+	  while (list.length > 1){
+	    list[0].multiply(list[1]);
+	    list.splice(1,1);
+	  }
+	}
+  /**
+   * Tries to strip a pair of parentheses. If it succeeds, the expression in
+   * parentheses is passed to convertBoolFunctions and so on up the chain
+   * so that it gets converted to a Complex.
+   * Used convertToProduct() to do detailed conversion.
+   * @return true if we managed to strip a pair of parentheses.
+   */
+  stripParenthesis(list){
+	  var lparen = -1;
+	  var rparen = -1;
+	  for (var i = 0; i < list.length; ++i ) {
+	    var obj = list[i];
+	    if (obj instanceof LParen) {
+	      lparen = i;
+	    } else if (obj instanceof RParen) {
+	      rparen = i;
+	      break;
+	    }
+	  }
+	  if( -1 == lparen && -1 == rparen )
+	    return false;
+	  if( -1 == lparen || -1 == rparen ){
+	    throw new Error('Parenthesis error');
+	  }
+	  var sublist = list.slice(lparen+1,rparen);	
+	  this.convertToProduct(sublist);
+	  list.splice(lparen,rparen-lparen+1);
+	  for (var i = 0; i < sublist.length; ++i) {
+	    list.splice(lparen+i,0,sublist[i]);
+	  }
+	  return true;
+  }
+  /**
+   * This is the main evaluation function. It works by a finding suitable
+   * subexpressions and calling a cascade of methods to evaluate the expression
+   * in the correct sequence. Thus the parser works largely by recursion on
+   * what can be thought of as a tree of PObjects defined by the sequence of
+   * Parser methods and the PObject hierarchy.
+   *
+   * There may be some inconsistency here&mdash;either Parser should store AngleType
+   * or it doesn&rsquo;t need to store Base.
+   * It won&rsquo;t cause any errors because we&rsquo;ll
+   * always get evaluated what was displayed.
+   *
+   * @param angleType Whether to use radians or degrees
+   * @return A Complex or an error if the expression was nonsensical.
+   */
+  evaluate(){
+	 /* set AngleType for all trig functions */
+	 for (var i = 0; i < this.list.length; ++i) {
+     var scale = this.radians ? RADIAN_SCALE : DEGREE_SCALE; 	   
+	   if (this.list[i] instanceof TrigFunction) {
+	     this.list[i].scale = scale;
+	   }
+	 }
+	 for (var i = 0; i < this.list.length; ++i ) {
+	 }
+	 try {
+	   while( this.stripParenthesis( this.list ) );
+	   this.convertToProduct( this.list );
+	 } catch(e){
+	   //System.out.println( e.getMessage() );
+	   //return new Error( "Error" );
+	 }
+	 if( this.list.length != 1 ){
+	   this.lastANS = null;
+ 	   console.log('length error',this.list.length );
+ 	   return 'Error';
+ 	 }
+	 try {
+	   var d = this.list[0].value;	   
+	   this.lastANS = this.list[0];
+	   this.list.length = 0; // clear list
+	   return parseFloat(Number(d).toPrecision(15));
+	 } catch(e){
+	   //System.out.println( e.getMessage() );
+	   //return new Error( "Error" );
+	 }
+ }
+ /**
+  * This function creates a string that can be used in the input section of the display
+  * It creates it from the list of PObject objects, this.list.
+  * @return A list for the input section of the display
+  */
+  getInputString(){
+    var inputString = '';
+    for (var i = 0; i < this.list.length; ++i) {
+      inputString += this.list[i].fullName();
+    }
+    return inputString; 
+  }
+}
+</script>
+<!--<script type="text/javascript" src="InputLabel.js"></script>-->
+<script type="text/javascript">
+class InputLabel {
+  // Constructor
+  constructor(label){ // supply a div
+    this.label = label;
+    this.label.maxWidth = this.label.width; // don’t let it grow
+    this.label.display = 'inline-block';
+  }
+  update(string){ // supply a string
+    this.label.innerHTML = string;
+  }
+}
+</script>
+<!--<script type="text/javascript" src="ButtonFunctions.js"></script>-->
+<script type="text/javascript">
+function updateInput(parser,inputLabel) {
+  var difference = inputLabel.label.scrollWidth - inputLabel.label.clientWidth;
+  if(difference > 0){
+    inputLabel.label.scrollLeft = difference;
+  } else {
+    inputLabel.label.scrollLeft = 0;
+  } 
+}
+
+function unshiftFunction() {
+  var shiftableDivs = document.querySelectorAll('div.shiftable');
+  for (var i=0; i < shiftableDivs.length; ++i){
+    var shiftableDiv = shiftableDivs[i];
+    shiftableDiv.style.zIndex = -1;
+  }   
+}
+
+function shiftFunction(){
+  var shiftableDivs = document.querySelectorAll('div.shiftable');
+  for (var i=0; i < shiftableDivs.length; ++i){
+    var shiftableDiv = shiftableDivs[i];
+    shiftableDiv.style.zIndex = 1;
+  }
+}
+
+function numeralFunction(parser,inputLabel,numeral){
+  parser.appendObject(numeral);
+  inputLabel.update(parser.getInputString());
+  updateInput(parser,inputLabel);
+}
+
+function piFunction(parser,inputLabel) {
+  parser.appendObject(new PiObject());
+  inputLabel.update(parser.getInputString());
+  updateInput(parser,inputLabel);
+}
+
+function rclFunction(parser,inputLabel) {
+  parser.appendObject(new Rcl(new Double(parser.memory)));
+  inputLabel.update(parser.getInputString());
+  updateInput(parser,inputLabel);
+}
+
+function ansFunction(parser,inputLabel) {
+  parser.appendObject(new Ans(parser.lastANS));
+  inputLabel.update(parser.getInputString());
+  updateInput(parser,inputLabel);
+}
+
+function equalsFunction(parser,inputLabel) {
+  if (parser.list.length > 0) {
+    var o = parser.list[parser.list.length-1];
+    if (parser.lastANS instanceof Double && (
+        o instanceof RFunction ||
+        o instanceof DFunction ||
+        o instanceof MFunction ||
+        o instanceof AFunction
+      )) {
+      parser.list.push( new Ans(parser.lastANS) );
+      inputLabel.update(parser.getInputString());
+    }
+    document.title = convertToStringForPython(parser.list);
+    parser.list = [];
+  }
+  unshiftFunction();
+}
+
+function stoFunction(parser,inputLabel) {
+  if (parser.list.length > 0) {
+    var o = parser.list[parser.list.length-1];
+    if (parser.lastANS instanceof Double && (
+        o instanceof RFunction ||
+        o instanceof DFunction ||
+        o instanceof MFunction ||
+        o instanceof AFunction
+      )) {
+      parser.list.push( new Ans(parser.lastANS) );
+      inputLabel.update(parser.getInputString());
+    }
+    document.title = 'STO;'+convertToStringForPython(parser.list);
+    parser.list = [];
+  } else {
+    document.title = 'STO;ANS;';
+  }
+}
+
+function mclFunction(parser) {
+  document.title = 'MCL;';
+  unshiftFunction();
+}
+
+function mPlusFunction(parser,inputLabel) {
+  if (parser.list.length > 0) {
+    var o = parser.list[parser.list.length-1];
+    if (parser.lastANS instanceof Double && (
+        o instanceof RFunction ||
+        o instanceof DFunction ||
+        o instanceof MFunction ||
+        o instanceof AFunction
+      )) {
+      parser.list.push( new Ans(parser.lastANS) );
+      inputLabel.update(parser.getInputString());
+    }
+    document.title = 'M+;'+convertToStringForPython(parser.list);
+    parser.list = [];
+  } else {
+    document.title = 'M+;ANS;';
+  }
+}
+
+function mMinusFunction(parser,inputLabel) {
+  if (parser.list.length > 0) {
+    var o = parser.list[parser.list.length-1];
+    if (parser.lastANS instanceof Double && (
+        o instanceof RFunction ||
+        o instanceof DFunction ||
+        o instanceof MFunction ||
+        o instanceof AFunction
+      )) {
+      parser.list.push( new Ans(parser.lastANS) );
+      inputLabel.update(parser.getInputString());
+    }
+    document.title = 'M-;'+convertToStringForPython(parser.list);
+    parser.list = [];
+  } else {
+    document.title = 'M-;ANS;';
+  }
+}
+
+function ACFunction(parser,inputLabel){
+  parser.list = [];
+  parser.lastANS = new Double(0);
+  inputLabel.update('');
+  unshiftFunction();
+  document.title = '#0;'
+}
+
+function DELFunction(parser,inputLabel){
+  if (parser.list.length > 0) {
+    parser.list.pop();
+    inputLabel.update(parser.getInputString());
+    updateInput(parser,inputLabel);
+  }
+}
+
+const addToken = new Add();
+function addFunction(parser,inputLabel){
+  parser.appendObject(addToken);
+  inputLabel.update(parser.getInputString());
+  updateInput(parser,inputLabel);
+}
+
+const subtractToken = new Subtract();
+function subtractFunction(parser,inputLabel){
+  parser.appendObject(subtractToken);
+  inputLabel.update(parser.getInputString());
+  updateInput(parser,inputLabel);
+}
+
+const eToken = new E();
+function eFunction(parser,inputLabel){
+  parser.appendObject(eToken);
+  inputLabel.update(parser.getInputString());
+  updateInput(parser,inputLabel);
+}
+
+const lParenToken = new LParen();
+function lParenFunction(parser,inputLabel) {
+  parser.appendObject(lParenToken);
+  inputLabel.update(parser.getInputString());
+  updateInput(parser,inputLabel); 
+}
+
+const rParenToken = new RParen();
+function rParenFunction(parser,inputLabel) {
+  parser.appendObject(rParenToken);
+  inputLabel.update(parser.getInputString());
+  updateInput(parser,inputLabel); 
+}
+
+const multiplyToken = new Multiply();
+function multiplyFunction(parser,inputLabel){
+  if (0 == parser.list.length) {
+    parser.appendObject(new Ans(parser.lastANS));
+  }
+  parser.appendObject(multiplyToken);
+  inputLabel.update(parser.getInputString());
+  updateInput(parser,inputLabel);
+}
+
+const divideToken = new Divide();
+function divideFunction(parser,inputLabel){
+  if (0 == parser.list.length) {
+    parser.appendObject(new Ans(parser.lastANS));
+  }
+  parser.appendObject(divideToken);
+  inputLabel.update(parser.getInputString());
+  updateInput(parser,inputLabel);
+}
+
+const squareToken = new Square();
+function squareFunction(parser,inputLabel){
+  if (0 == parser.list.length) {
+    parser.appendObject(new Ans(parser.lastANS));
+  }
+  parser.appendObject(squareToken);
+  inputLabel.update(parser.getInputString());
+  updateInput(parser,inputLabel);
+}
+
+const cubeToken = new Cube();
+function cubeFunction(parser,inputLabel){
+  if (0 == parser.list.length) {
+    parser.appendObject(new Ans(parser.lastANS));
+  }
+  parser.appendObject(cubeToken);
+  inputLabel.update(parser.getInputString());
+  updateInput(parser,inputLabel);
+  unshiftFunction();
+}
+
+const factorialToken = new Factorial();
+function factorialFunction(parser,inputLabel){
+  if (0 == parser.list.length) {
+    parser.appendObject(new Ans(parser.lastANS));
+  }
+  parser.appendObject(factorialToken);
+  inputLabel.update(parser.getInputString());
+  updateInput(parser,inputLabel);
+  unshiftFunction()
+}
+
+const inverseToken = new Inverse();
+function inverseFunction(parser,inputLabel){
+  if (0 == parser.list.length) {
+    parser.appendObject(new Ans(parser.lastANS));
+  }
+  parser.appendObject(inverseToken);
+  inputLabel.update(parser.getInputString());
+  updateInput(parser,inputLabel);
+  unshiftFunction()
+}
+
+const squareRootToken = new SquareRoot();
+function squareRootFunction(parser,inputLabel){
+  parser.appendObject(squareRootToken);
+  inputLabel.update(parser.getInputString());
+  updateInput(parser,inputLabel);
+  unshiftFunction()
+}
+
+const cubeRootToken = new CubeRoot();
+function cubeRootFunction(parser,inputLabel){
+  parser.appendObject(cubeRootToken);
+  inputLabel.update(parser.getInputString());
+  updateInput(parser,inputLabel);
+  unshiftFunction()
+}
+
+function drFunction(parser) {
+  if (parser.radians) {
+    parser.radians = !parser.radians;
+    document.title = "d";
+  } else {
+    parser.radians = !parser.radians;
+    document.title = "r";
+  }
+}
+
+function copyleftFunction(parser) {
+  document.title = "?";
+  unshiftFunction();
+}
+
+const sinToken = new Sin();
+function sinFunction(parser,inputLabel){
+  parser.appendObject(sinToken);
+  inputLabel.update(parser.getInputString());
+  updateInput(parser,inputLabel);
+}
+
+const cosToken = new Cos();
+function cosFunction(parser,inputLabel){
+  parser.appendObject(cosToken);
+  inputLabel.update(parser.getInputString());
+  updateInput(parser,inputLabel);
+}
+
+const tanToken = new Tan();
+function tanFunction(parser,inputLabel){
+  parser.appendObject(tanToken);
+  inputLabel.update(parser.getInputString());
+  updateInput(parser,inputLabel);
+}
+
+const logToken = new Log();
+function logFunction(parser,inputLabel){
+  parser.appendObject(logToken);
+  inputLabel.update(parser.getInputString());
+  updateInput(parser,inputLabel);
+}
+
+const lnToken = new Ln();
+function lnFunction(parser,inputLabel){
+  parser.appendObject(lnToken);
+  inputLabel.update(parser.getInputString());
+  updateInput(parser,inputLabel);
+}
+
+const arcsinToken = new Arcsin();
+function arcsinFunction(parser,inputLabel){
+  parser.appendObject(arcsinToken);
+  inputLabel.update(parser.getInputString());
+  updateInput(parser,inputLabel);
+  unshiftFunction()
+}
+
+const arccosToken = new Arccos();
+function arccosFunction(parser,inputLabel){
+  parser.appendObject(arccosToken);
+  inputLabel.update(parser.getInputString());
+  updateInput(parser,inputLabel);
+  unshiftFunction()
+}
+
+const arctanToken = new Arctan();
+function arctanFunction(parser,inputLabel){
+  parser.appendObject(arctanToken);
+  inputLabel.update(parser.getInputString());
+  updateInput(parser,inputLabel);
+  unshiftFunction()
+}
+
+const tenXToken = new TenX();
+function tenXFunction(parser,inputLabel){
+  parser.appendObject(tenXToken);
+  inputLabel.update(parser.getInputString());
+  updateInput(parser,inputLabel);
+  unshiftFunction()
+}
+
+const expToken = new Exp();
+function expFunction(parser,inputLabel){
+  parser.appendObject(expToken);
+  inputLabel.update(parser.getInputString());
+  updateInput(parser,inputLabel);
+  unshiftFunction()
+}
+
+const rootToken = new Root();
+function rootFunction(parser,inputLabel){
+  parser.appendObject(rootToken);
+  inputLabel.update(parser.getInputString());
+  updateInput(parser,inputLabel);
+  unshiftFunction()
+}
+
+const powerToken = new Power();
+function powerFunction(parser,inputLabel){
+  if (0 == parser.list.length) {
+    parser.appendObject(new Ans(parser.lastANS));
+  }
+  parser.appendObject(powerToken);
+  inputLabel.update(parser.getInputString());
+  updateInput(parser,inputLabel);
+}
+
+const combinationToken = new Combination();
+function combinationFunction(parser,inputLabel){
+  if (0 == parser.list.length) {
+    parser.appendObject(new Ans(parser.lastANS));
+  }
+  parser.appendObject(combinationToken);
+  inputLabel.update(parser.getInputString());
+  updateInput(parser,inputLabel);
+}
+
+const permutationToken = new Permutation();
+function permutationFunction(parser,inputLabel){
+  if (0 == parser.list.length) {
+    parser.appendObject(new Ans(parser.lastANS));
+  }
+  parser.appendObject(permutationToken);
+  inputLabel.update(parser.getInputString());
+  updateInput(parser,inputLabel);
+  unshiftFunction()
+}
+
+function fullscreenFunction(parser,inputLabel){
+  var elem = document.documentElement;
+  if(window.innerHeight == screen.height){
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    } else if (document.webkitExitFullscreen) { /* Safari */
+      document.webkitExitFullscreen();
+    } else if (document.msExitFullscreen) { /* IE11 */
+      document.msExitFullscreen();
+    }    
+  } else {
+    if (elem.requestFullscreen) {
+      elem.requestFullscreen();
+    } else if (elem.webkitRequestFullscreen) { /* Safari */
+      elem.webkitRequestFullscreen();
+    } else if (elem.msRequestFullscreen) { /* IE11 */
+      elem.msRequestFullscreen();
+    }
+  }
+  document.title = "fullscreen";
+  unshiftFunction()
+}
+
+</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Noto Sans JP">
+<style>
+body {
+  background-color: cornflowerblue;
+  font-family: "Noto Sans JP";
+}
+div {
+  font-family: "Noto Sans JP";
+}
+.mathematics { 
+  font-family: Symbol, Sans;
+}
+button {
+  border-radius: 5px;
+  border-color: lightgrey;
+  font-family: "Noto Sans JP";
+}
+button:hover {  
+  background-color: cornflowerblue;
+}
+.abutton {
+  /*background-color: azure;*/
+}
+.abutton:hover {
+  background-color: cornflowerblue;
+}
+.sbutton {
+  background-color: cornsilk;
+}
+.sbutton:hover {
+  background-color: cornflowerblue;
+}
+.modal {
+  display: block; /* Visible by default */
+  position: fixed; /* Stay in place */
+  z-index: 1; /* Sit on top */
+  padding-top: 0px; /* Location of the box */
+  left: 0;
+  top: 0;
+  width: 100%; /* Full width */
+  height: 100%; /* Full height */
+  overflow: auto; /* Enable scroll if needed */
+  background-color: rgb(0,0,0); /* Fallback color */
+  background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+}
+.calculator {
+  display: grid;
+  grid-template-areas:
+  "D D D D D D D . . ."
+  "D D D D D D D . left right"
+  "D D D D D D D . . ."
+  ". . . . . . . . . ."
+  "SHIFT MODE STO . RCL Mplus Mminus . DEL AC"
+  "inv square sqrt . seven eight nine . leftp rightp"
+  "sin cos tan . four five six . multiply divide"
+  "log ln power . one two three . plus minus"
+  "factorial nCr pi . zero point e . ANS equals";
+  grid-template-columns: 3.4em 3.4em 3.4em 3px 3.4em 3.4em 3.4em 3px 3.4em 3.4em;
+  grid-template-rows: 1.55em 1.5em 1em 3px 1.7em 1.7em 1.7em 1.7em 1.7em;
+  grid-gap:2px;
+  -ms-transform: scale(1, 1); /* IE 9 */
+  -webkit-transform: scale(1, 1); /* Safari */
+  transform: scale(1, 1);
+  position: relative;
+  background-color: darkblue;
+  margin: auto;
+  padding: 10px;
+  /* border: 1px solid #888; */
+  width: 460px;
+  box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);
+  -webkit-animation-name: animatetop;
+  -webkit-animation-duration: 0.4s;
+  animation-name: animatetop;
+  animation-duration: 0.4s;
+  /* border-radius: 20px;
+  border-style: outset;
+  border-width: 5px;
+  border-bottom-color: darkgray;*/
+}
+.calc_button {
+  width:100%;
+  height:100%;
+}
+.Display {
+  grid-area: D;
+  background-color: #fcfcdd;
+  border-style: inset;
+  border-radius: 8px;
+  border-width: 2px;
+  border-color: darkgrey;
+}
+.shiftable {z-index: -1;}
+.SHIFT {grid-area: SHIFT;}
+.MODE {grid-area: MODE;}
+.Mminus {grid-area: Mminus;}
+.STO {grid-area: STO;}
+.RCL {grid-area: RCL;}
+.Mplus {grid-area: Mplus;}
+.DEL {grid-area: DEL;}
+.AC {grid-area: AC;}
+.inv {grid-area: inv;}
+.square {grid-area: square;}
+.sqrt {grid-area: sqrt;}
+.seven {grid-area: seven;}
+.eight {grid-area: eight;}
+.nine {grid-area: nine;}
+.leftp {grid-area: leftp;}
+.rightp {grid-area: rightp;}
+.sin {grid-area: sin;}
+.cos {grid-area: cos;}
+.tan {grid-area: tan;}
+.four {grid-area: four;}
+.five {grid-area: five;}
+.six {grid-area: six;}
+.multiply {grid-area: multiply;}
+.divide {grid-area: divide;}
+.log {grid-area: log;}
+.ln {grid-area: ln;}
+.power {grid-area: power;}
+.one {grid-area: one;}
+.two {grid-area: two;}
+.three {grid-area: three;}
+.plus {grid-area: plus;}
+.minus {grid-area: minus;}
+.factorial {grid-area: factorial;}
+.nCr {grid-area: nCr;}
+.pi {grid-area: pi;}
+.zero {grid-area: zero;}
+.point {grid-area: point;}
+.e {grid-area: e;}
+.ANS {grid-area: ANS;}
+.equals {grid-area: equals;}
+.input {
+  grid-row-start: 1;
+  grid-row-end: 2;
+  grid-column-start: 1;
+  grid-column-end: 8;
+  text-align: left;
+  margin-left: 3px;
+  margin-right: 3px;
+  font-size: medium;
+  overflow-x: scroll;
+  overflow: hidden;
+  scrollbar-width: none;
+}
+.input-sup {
+  vertical-align: baseline;
+  position: relative;
+  top: -0.4em;
+}
+.output {
+  grid-row-start: 2;
+  grid-row-end: 3;
+  grid-column-start: 1;
+  grid-column-end: 8;
+  text-align: right;
+  margin-left: 3px;
+  margin-right: 3px;
+  font-size: x-large;
+}
+.display-extra {
+  grid-row-start: 3;
+  grid-row-end: 4;
+  grid-column-start: 1;
+  grid-column-end: 8;
+  text-align: left;
+  margin-left: 6px;
+  margin-right: 6px;
+  font-size: xx-small;
+}
+</style>
+<script type="text/javascript">
+  function setCalculatorSize() {
+    var w = window.innerWidth;
+    var h = window.innerHeight;
+    var z = Math.min(w/480,h/240); // zoom
+    var p = 120*(z-1); // padding for calculator
+    // set these values
+    document.querySelector('div#myModal').style['padding-top'] = p+'px';
+    var divC = document.querySelector('div#myCalculator');
+    divC.style['-ms-transform'] = 'scale('+z+','+z+')';
+    divC.style['-webkit-transform'] = 'scale('+z+','+z+')';
+    divC.style['transform'] = 'scale('+z+','+z+')';
+  }  
+</script>
+<title>#0;</title>
+</head>
+<body onresize="setCalculatorSize()">
+<div id="myModal" class="modal">
+  <div class="calculator" id="myCalculator">
+    <div class="Display">  
+    </div>
+    <div class="output" id="output-panel">
+      0
+    </div>
+    <div class="input">
+      &nbsp; 
+    </div>
+    <div class="display-extra" id="display-extra">
+      &emsp;&nbsp;degrees
+    </div>
+    <div class="SHIFT">
+      <button class="calc_button" id="SHIFT" title="Select additional functions [Space bar]">
+        Shift
+      </button>  
+    </div>    
+    <div class="SHIFT shiftable" id="unshift">
+      <button class="calc_button" id="UNSHIFT" title="Select original functions [Space bar]">
+        Shift
+      </button>  
+    </div>
+    <div class="MODE">
+      <button class="calc_button" id="MODE" title="Toggle between degrees and radians [d]">
+        d/r
+      </button>  
+    </div>
+    <div class="MODE shiftable">
+      <button class="calc_button sbutton" id="fullscreen" title="Full screen mode">
+        FS
+      </button>  
+    </div>
+    <div class="STO">
+      <button class="calc_button" id="STO" title="Evaluate expression and store in memory [S]">
+        STO
+      </button>  
+    </div>
+    <div class="STO shiftable">
+      <button class="calc_button sbutton" id="MCL" title="Clear the memory [M]">
+        MCL
+      </button>  
+    </div>
+    <div class="RCL">
+      <button class="calc_button" id="RCL" title="Recall value stored in memory">
+        RCL
+      </button>  
+    </div>
+    <div class="Mplus">
+      <button class="calc_button" id="Mplus" title="Evaluate expression and add to memory">
+        M+
+      </button>  
+    </div>
+    <div class="Mminus">
+      <button class="calc_button" id="Mminus" title="Evaluate expression and subtract from memory">
+        M&minus;  
+      </button>  
+    </div>
+    <div class="DEL">
+      <button class="calc_button" id="DEL" title="Delete the last item entered [Delete]">
+        DEL
+      </button>  
+    </div>
+    <div class="AC">
+      <button class="calc_button" id="AC" title="Clear expression and reset everything except memory">
+        AC
+      </button>  
+    </div>
+    <div class="inv">
+      <button class="calc_button sbutton" id="inv" title="Inverse of value on left">
+        \(x^{-1}\)
+      </button>  
+    </div>
+    <div class="square">
+      <button class="calc_button sbutton" id="square" title="Square">
+        \(x^2\)
+      </button>  
+    </div>
+    <div class="square shiftable">
+      <button class="calc_button sbutton" id="cube" title="Cube">
+        \(x^3\)
+      </button>  
+    </div>
+    <div class="sqrt">
+      <button class="calc_button sbutton" id="sqrt" title="Square root of value on right">
+        \(\sqrt{x}\)
+      </button>  
+    </div>
+    <div class="sqrt shiftable">
+      <button class="calc_button sbutton" id="cbrt" title="Cube root of value on right">
+        \(\sqrt[3]{x}\)
+      </button>  
+    </div>
+    <div class="sin">
+      <button class="calc_button sbutton" id="sin" title="Sine">
+        \(\sin\)
+      </button>  
+    </div>
+    <div class="sin shiftable">
+      <button class="calc_button sbutton" id="arcsin" title="Inverse sine (arc sine)">
+        \(\sin^{-1}\)
+      </button>  
+    </div>
+    <div class="cos">
+      <button class="calc_button sbutton" id="cos" title="Cosine">
+        \(\cos\vphantom{l}\)
+      </button>  
+    </div>
+    <div class="cos shiftable">
+      <button class="calc_button sbutton" id="arccos" title="Inverse cosine (arc cosine)">
+        \(\cos^{-1}\)
+      </button>  
+    </div>
+    <div class="tan">
+      <button class="calc_button sbutton" id="tan" title="Tangent">
+        \(\tan\)
+      </button>  
+    </div>
+    <div class="tan shiftable">
+      <button class="calc_button sbutton" id="arctan" title="Inverse tangent (arc tangent)">
+        \(\tan^{-1}\)
+      </button>  
+    </div>
+    <div class="seven">
+      <button class="calc_button abutton" id="seven">
+        7
+      </button>  
+    </div>
+    <div class="eight">
+      <button class="calc_button abutton" id="eight">
+        8
+      </button>  
+    </div>
+    <div class="nine">
+      <button class="calc_button abutton" id="nine">
+        9
+      </button>  
+    </div>
+    <div class="leftp">
+      <button class="calc_button" id="leftp">
+        (
+      </button>  
+    </div>
+    <div class="rightp">
+      <button class="calc_button" id="rightp">
+        )
+      </button>  
+    </div>
+    <div class="four">
+      <button class="calc_button abutton" id="four">
+        4
+      </button>  
+    </div>
+    <div class="five">
+      <button class="calc_button abutton" id="five">
+        5
+      </button>  
+    </div>
+    <div class="six">
+      <button class="calc_button abutton" id="six">
+        6
+      </button>  
+    </div>
+    <div class="multiply">
+      <button class="calc_button abutton" id="multiply">
+        &times;
+      </button>  
+    </div>
+    <div class="divide">
+      <button class="calc_button abutton" id="divide">
+        &divide;
+      </button>  
+    </div>
+    <div class="log">
+      <button class="calc_button sbutton" id="log" title="Base 10 logarithm">
+        \(\log\)
+      </button>  
+    </div>
+    <div class="log shiftable">
+      <button class="calc_button sbutton" id="tenX" title="10 to the power of x (inverse of base 10 logartithm)">
+        \(10^{x}\)
+      </button>  
+    </div>
+    <div class="ln">
+      <button class="calc_button sbutton" id="ln" title="Natural logarithm">
+        \(\ln\)
+      </button>  
+    </div>
+    <div class="ln shiftable">
+      <button class="calc_button sbutton" id="exp" title="Exponential function (inverse of natural logarithm)">
+        \(\exp\vphantom{l}\)
+      </button>  
+    </div>
+    <div class="power">
+      <button class="calc_button sbutton" id="power" title="Value on left to power of value on right">
+        \(x^y\)
+      </button>  
+    </div>
+    <div class="power shiftable">
+      <button class="calc_button sbutton" id="root" title="(value on left)th root of value on right">
+        \(\sqrt[r]{x}\)
+      </button>  
+    </div>
+    <div class="one">
+      <button class="calc_button abutton" id="one">
+        1
+      </button>  
+    </div>
+    <div class="two">
+      <button class="calc_button abutton" id="two">
+        2
+      </button>  
+    </div>
+    <div class="three">
+      <button class="calc_button abutton" id="three">
+        3
+      </button>  
+    </div>
+    <div class="plus">
+      <button class="calc_button abutton" id="plus">
+        +
+      </button>
+    </div>  
+    <div class="minus">
+      <button class="calc_button abutton" id="minus">
+        &minus;
+      </button>  
+    </div>  
+    <div class="factorial">
+      <button class="calc_button sbutton" id="factorial" title="Factorial of value on left [!]">
+        \(!\)
+      </button>  
+    </div>  
+    <div class="nCr">
+      <button class="calc_button sbutton" id="nCr" title="Number of unordered ways of choosing value on right objects from value on left [C]">
+        \(n\text{C}r\)
+      </button>  
+    </div> 
+    <div class="factorial shiftable">
+      <button class="calc_button sbutton" id="copyleft" title="Copyright statement [?]">
+        ?
+      </button>  
+    </div>
+    <div class="nCr shiftable">
+      <button class="calc_button sbutton" id="nPr" title="Number of ordered ways of choosing value on right objects from value on left [P]">
+        \(n\text{P}r\)
+      </button>  
+    </div>
+    <div class="pi">
+      <button class="calc_button sbutton" id="pi" title="Mathematical constant pi [p]">
+        \(\pi\)
+      </button>  
+    </div>
+    <div class="zero">
+      <button class="calc_button abutton" id="zero">
+        0
+      </button>  
+    </div>
+    <div class="point">
+      <button class="calc_button abutton" id="decimal">
+        \(\cdot\)
+      </button>  
+    </div>
+    <div class="e">
+      <button class="calc_button" id="e" title="Use to enter numbers in scientific notation [e]">
+        e
+      </button>  
+    </div>
+    <div class="ANS">
+      <button class="calc_button" id="ANS" title="Last value calculated [a]">
+        ANS
+      </button> 
+    </div>
+    <div class="equals">
+      <button class="calc_button" id="equals" title="Compute expression and show result [Enter]">
+        =
+      </button>  
+    </div>
+  </div>
+</div>
+<script type="text/javascript">
+  setCalculatorSize();
+  var inputLabel = new InputLabel(document.querySelector('div.input'));
+  var parser = new Parser(inputLabel);
+  var zeroNumeral = new Numeral('0');
+  var oneNumeral = new Numeral('1');
+  var twoNumeral = new Numeral('2');
+  var threeNumeral = new Numeral('3');
+  var fourNumeral = new Numeral('4');
+  var fiveNumeral = new Numeral('5');
+  var sixNumeral = new Numeral('6');
+  var sevenNumeral = new Numeral('7');
+  var eightNumeral = new Numeral('8');
+  var nineNumeral = new Numeral('9');
+  var decimalNumeral = new Numeral('.');
+  var eNumeral = new Numeral('e');
+  var minusNumeral = new Numeral('-');
+  document.querySelector('button#AC').onclick = function() { ACFunction(parser,inputLabel); };
+  document.querySelector('button#SHIFT').onclick = function() { shiftFunction(); };
+  document.querySelector('button#UNSHIFT').onclick = function() { unshiftFunction(); };
+  document.querySelector('button#MODE').onclick = function() { drFunction(parser); };
+  document.querySelector('button#zero').onclick = function() { numeralFunction(parser,inputLabel,zeroNumeral); };
+  document.querySelector('button#one').onclick = function() { numeralFunction(parser,inputLabel,oneNumeral); };
+  document.querySelector('button#two').onclick = function() { numeralFunction(parser,inputLabel,twoNumeral); };
+  document.querySelector('button#three').onclick = function() { numeralFunction(parser,inputLabel,threeNumeral); };
+  document.querySelector('button#four').onclick = function() { numeralFunction(parser,inputLabel,fourNumeral); };
+  document.querySelector('button#five').onclick = function() { numeralFunction(parser,inputLabel,fiveNumeral); };
+  document.querySelector('button#six').onclick = function() { numeralFunction(parser,inputLabel,sixNumeral); };
+  document.querySelector('button#seven').onclick = function() { numeralFunction(parser,inputLabel,sevenNumeral); };
+  document.querySelector('button#eight').onclick = function() { numeralFunction(parser,inputLabel,eightNumeral); };
+  document.querySelector('button#nine').onclick = function() { numeralFunction(parser,inputLabel,nineNumeral); };
+  document.querySelector('button#decimal').onclick = function() { numeralFunction(parser,inputLabel,decimalNumeral); };
+  document.querySelector('button#plus').onclick = function() { addFunction(parser,inputLabel); };
+  document.querySelector('button#minus').onclick = function() { subtractFunction(parser,inputLabel); };
+  document.querySelector('button#multiply').onclick = function() { multiplyFunction(parser,inputLabel); };
+  document.querySelector('button#divide').onclick = function() { divideFunction(parser,inputLabel); };
+  document.querySelector('button#square').onclick = function() { squareFunction(parser,inputLabel); };
+  document.querySelector('button#cube').onclick = function() { cubeFunction(parser,inputLabel); };
+  document.querySelector('button#factorial').onclick = function() { factorialFunction(parser,inputLabel); };
+  document.querySelector('button#copyleft').onclick = function() { copyleftFunction(parser,inputLabel); };
+  document.querySelector('button#inv').onclick = function() { inverseFunction(parser,inputLabel); };
+  document.querySelector('button#sqrt').onclick = function() { squareRootFunction(parser,inputLabel); };
+  document.querySelector('button#cbrt').onclick = function() { cubeRootFunction(parser,inputLabel); };
+  document.querySelector('button#sin').onclick = function() { sinFunction(parser,inputLabel); };
+  document.querySelector('button#arcsin').onclick = function() { arcsinFunction(parser,inputLabel); };
+  document.querySelector('button#cos').onclick = function() { cosFunction(parser,inputLabel); };
+  document.querySelector('button#arccos').onclick = function() { arccosFunction(parser,inputLabel); };
+  document.querySelector('button#tan').onclick = function() { tanFunction(parser,inputLabel); };
+  document.querySelector('button#arctan').onclick = function() { arctanFunction(parser,inputLabel); };
+  document.querySelector('button#log').onclick = function() { logFunction(parser,inputLabel); };
+  document.querySelector('button#tenX').onclick = function() { tenXFunction(parser,inputLabel); };
+  document.querySelector('button#ln').onclick = function() { lnFunction(parser,inputLabel); };
+  document.querySelector('button#exp').onclick = function() { expFunction(parser,inputLabel); };
+  document.querySelector('button#power').onclick = function() { powerFunction(parser,inputLabel); };
+  document.querySelector('button#root').onclick = function() { rootFunction(parser,inputLabel); };
+  document.querySelector('button#nCr').onclick = function() { combinationFunction(parser,inputLabel); };
+  document.querySelector('button#nPr').onclick = function() { permutationFunction(parser,inputLabel); };
+  document.querySelector('button#e').onclick = function() { eFunction(parser,inputLabel); };
+  document.querySelector('button#pi').onclick = function() { piFunction(parser,inputLabel); };
+  document.querySelector('button#leftp').onclick = function() { lParenFunction(parser,inputLabel); };
+  document.querySelector('button#rightp').onclick = function() { rParenFunction(parser,inputLabel); };
+  document.querySelector('button#STO').onclick = function() { stoFunction(parser,inputLabel); };
+  document.querySelector('button#MCL').onclick = function() { mclFunction(parser); };
+  document.querySelector('button#Mplus').onclick = function() { mPlusFunction(parser,inputLabel); };
+  document.querySelector('button#Mminus').onclick = function() { mMinusFunction(parser,inputLabel); };
+  document.querySelector('button#RCL').onclick = function() { rclFunction(parser,inputLabel); };
+  document.querySelector('button#ANS').onclick = function() { ansFunction(parser,inputLabel); };
+  document.querySelector('button#DEL').onclick = function() { DELFunction(parser,inputLabel); };
+  document.querySelector('button#equals').onclick = function() { equalsFunction(parser,inputLabel); };
+  document.querySelector('button#fullscreen').onclick = function() { fullscreenFunction(); };
+  // keyboard shortcuts
+  document.onkeyup = function(e) {
+    //console.log('[',e.key,']');
+    var key = e.key;
+    switch(key){
+      case ')':
+        rParenFunction(parser,inputLabel);
+        break;
+      case '0':
+        numeralFunction(parser,inputLabel,zeroNumeral);
+        break;
+      case '1':
+        numeralFunction(parser,inputLabel,oneNumeral);
+        break;
+      case '2':
+        numeralFunction(parser,inputLabel,twoNumeral);
+        break;
+      case '3':
+        numeralFunction(parser,inputLabel,threeNumeral);
+        break;
+      case '4':
+        numeralFunction(parser,inputLabel,fourNumeral);
+        break;
+      case '5':
+        numeralFunction(parser,inputLabel,fiveNumeral);
+        break;
+      case '6':
+        numeralFunction(parser,inputLabel,sixNumeral);
+        break;
+      case '7':
+        numeralFunction(parser,inputLabel,sevenNumeral);
+        break;
+      case '8':
+        numeralFunction(parser,inputLabel,eightNumeral);
+        break;
+      case '(':
+        lParenFunction(parser,inputLabel);
+        break;
+      case '9':
+        numeralFunction(parser,inputLabel,nineNumeral);
+        break;
+      case 'e':
+        eFunction(parser,inputLabel,nineNumeral);
+        break;
+      case '.':
+        numeralFunction(parser,inputLabel,decimalNumeral);
+      case ' ':
+        if(1 == document.querySelector('div#unshift').style.zIndex)
+          unshiftFunction();
+        else
+          shiftFunction();
+        break;
+      case '!':
+        factorialFunction(parser,inputLabel);
+        break;
+      case 'd':
+      case 'r':
+        drFunction(parser);
+        break;
+      case 'C':
+        combinationFunction(parser,inputLabel);
+        break;
+      case 'P':
+        permutationFunction(parser,inputLabel);
+        break;
+      case 'p':
+        piFunction(parser,inputLabel);
+        break;
+      case 'S':
+        stoFunction(parser,inputLabel);
+        break;
+      case 'R':
+        rclFunction(parser,inputLabel);
+        break;
+      case 'M':
+        mclFunction(parser);
+        break;
+      case 'a':
+      case 'A':
+        ansFunction(parser,inputLabel);
+        break;
+      case '+':
+        addFunction(parser,inputLabel);
+        break;
+      case '-':
+        subtractFunction(parser,inputLabel);
+        break;
+      case '*':
+        multiplyFunction(parser,inputLabel);
+        break;
+      case '\\':
+      case '/':
+        divideFunction(parser,inputLabel);
+        break;
+      case '=':
+      case 'Enter':
+        equalsFunction(parser,inputLabel);
+        break;
+      case 'Delete':
+      case 'Backspace':
+        DELFunction(parser,inputLabel);
+        break;
+    } 
+  };
+</script>
+</body>
+</html>
